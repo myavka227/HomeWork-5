@@ -20,22 +20,20 @@ services:
       - redis
 
   nginx:
-    image: nginx:latest
+    image: bitnami/nginx:latest
     ports:
-      - "80:80"
+      - "80:8080"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/default.conf:/opt/bitnami/nginx/conf/server_blocks/default.conf:ro
     depends_on:
       - backend
 
-  nginx-exporter:
-    image: nginx/nginx-prometheus-exporter:latest
+  nginx-vts-exporter:
+    image: sophos/nginx-vts-exporter
     environment:
-      - SCRAPE_URI=http://nginx/stub_status
+      - NGINX_STATUS=http://nginx:8080/status/format/json
     ports:
-      - "9113:9113"
-    depends_on:
-      - nginx
+      - "9913:9913"
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
@@ -54,7 +52,7 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - nginx-exporter
+      - nginx-vts-exporter
       - postgres-exporter
       - node-exporter
 
