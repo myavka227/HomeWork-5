@@ -84,5 +84,13 @@ def delete_user(id):
     cache.delete(f"user:{id}")
     return jsonify({"message": "User deleted"})
 
+@app.route('/')
+def home():
+    return jsonify({
+        "status": "success",
+        "message": "Welcome to Flask API",
+        "endpoints": ["/user", "/user/<id>", "/stub_status"]
+    })
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0')

@@ -5,13 +5,14 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
       POSTGRES_DB: flask_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7
 
   backend:
     build: ./app
-    image: flask_project_backend_v2  # <--- ВОТ ЭТУ СТРОЧКУ МЫ ДОБАВИЛИ
     environment:
       DATABASE_URL: postgresql://user:pass@db:5432/flask_db
     depends_on:
@@ -20,9 +21,49 @@ services:
 
   nginx:
     image: nginx:latest
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     ports:
       - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    environment:
+      - SCRAPE_URI=http://nginx/stub_status
+    ports:
+      - "9113:9113"
+    depends_on:
+      - nginx
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    environment:
+      DATA_SOURCE_NAME: "postgresql://user:pass@db:5432/flask_db?sslmode=disable"
+    depends_on:
+      - db
+
+  node-exporter:
+    image: prom/node-exporter:latest
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - nginx-exporter
+      - postgres-exporter
+      - node-exporter
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
