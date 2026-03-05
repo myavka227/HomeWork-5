@@ -1,0 +1,50 @@
+---
+- name: Setup K3s and Deploy Flask App
+  hosts: localhost
+  become: yes
+  tasks:
+    # 1. Установка K3s (Kubernetes)
+    - name: Download and install K3s
+      shell: curl -sfL https://get.k3s.io | sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    # 2. Настройка прав доступа к конфигу (чтобы Helm мог его читать)
+    - name: Ensure k3s.yaml has correct permissions
+      file:
+        path: /etc/rancher/k3s/k3s.yaml
+        mode: '0644'
+
+    # 3. Установка Helm
+    - name: Download and install Helm
+      shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      args:
+        creates: /usr/local/bin/helm
+
+    # 4. Пауза, чтобы Kubernetes успел "проснуться"
+    - name: Wait for K3s to be ready
+      pause:
+        seconds: 30
+
+    # 5. Деплой приложения через Helm (Пункт 5 задания)
+    - name: Deploy Flask-Nginx application
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        /usr/local/bin/helm upgrade --install my-release /home/sonya/flask_project/charts/flask-app
+      register: helm_result
+
+    # 6. Вывод результата в консоль для проверки
+    - name: Show Helm deploy result
+      debug:
+        var: helm_result.stdout_lines
+
+    # 7. Деплой базы данных (Разделение чартов - Пункт 5 UPD)
+    - name: Deploy Database Chart
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        /usr/local/bin/helm upgrade --install db-release /home/sonya/flask_project/charts/database-chart
+      when: query_db_chart_exists.stat.exists
+      vars:
+        query_db_chart_exists:
+          stat:
+            exists: true # Мы предполагаем, что ты создала папку database-chart

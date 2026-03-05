@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+        - name: flask-app
+          image: sonyagorbacheva/flask_app:latest
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /tmp
+
+        - name: nginx-sidecar
+          image: sonyagorbacheva/my-nginx:latest
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /tmp
+
+      volumes:
+        - name: socket-dir
+          emptyDir: {}

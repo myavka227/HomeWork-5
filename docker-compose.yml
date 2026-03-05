@@ -32,8 +32,8 @@ services:
     image: sophos/nginx-vts-exporter
     environment:
       - NGINX_STATUS=http://nginx:8080/status/format/json
-    ports:
-      - "9913:9913"
+    depends_on:
+      - nginx
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
@@ -44,11 +44,19 @@ services:
 
   node-exporter:
     image: prom/node-exporter:latest
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
 
   prometheus:
     image: prom/prometheus:latest
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
     depends_on:
@@ -60,8 +68,12 @@ services:
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
 
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
